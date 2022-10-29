@@ -1,0 +1,4 @@
+match_id,season   ,date      ,player1       ,player2   ,winner,score
+1       ,Fall 2022,10/01/2022,Aaron Aaronson,Bob Bobson,1     ,"6-1, 7-5"
+2       ,Fall 2022,10/02/2022,Aaron Aaronson,Bob Bobson,1     ,"6-2, 6-3"
+3       ,Fall 2022,10/02/2022,Aaron Aaronson,Bob Bobson,2     ,"10-8"
