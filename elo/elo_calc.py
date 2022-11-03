@@ -14,6 +14,7 @@ https://github.com/sleepomeno/tennis_atp/blob/master/examples/elo.R
 
 
 K = 500
+DECIMAL_ROUND_PLACES = 4
 
 def get_expected_rating(my_rating, opponent_rating):
     return 1.0 / (1.0 + pow(10.0, (opponent_rating - my_rating) / 400.0))
@@ -32,5 +33,4 @@ def calculate_elo_from_ratings(rating1, rating2, did_first_player_win, k=K):
     result1 = rating1 + k * (score1 - expected1)
     result2 = rating2 + k * (score2 - expected2)
 
-    # TODO refine rounding behavior
-    return round(result1, 1), round(result2, 1)
+    return round(result1, DECIMAL_ROUND_PLACES), round(result2, DECIMAL_ROUND_PLACES)
