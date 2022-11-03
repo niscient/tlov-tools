@@ -1,5 +1,3 @@
-# TODO create test for entire CSV creation process, including a series of related matches
-
 import collections
 import csv
 import os
