@@ -1,9 +1,13 @@
-import collections
 import csv
+import collections
 import os
+import shutil
 
 import elo_calc
 
+
+TEST_FILES_DIR = 'test_files'
+BACKUP_DIR = 'backup'
 
 PLAYERS_FILE = 'players.txt'
 SINGLES_RESULTS_FILE = 'singles_results.csv'
@@ -18,6 +22,32 @@ class Result:
         self.match_id = match_id
         self.player = player
         self.elo_after = elo_after
+
+
+def backup_files():
+    if os.path.basename(os.getcwd()) == TEST_FILES_DIR:
+        return
+
+    if not os.path.isdir(BACKUP_DIR):
+        os.mkdir(BACKUP_DIR)
+
+    filenames = os.listdir(BACKUP_DIR)
+
+    version_filenames = sorted(
+        [int(filename) for filename in filenames if filename.isdigit()]
+    )
+
+    current_version = 0
+    if len(version_filenames) > 0:
+        current_version = version_filenames[-1]
+
+    version_backup_dir = os.path.join(BACKUP_DIR, str(current_version + 1))
+    os.mkdir(version_backup_dir)
+
+    shutil.copy(PLAYERS_FILE, version_backup_dir)
+    shutil.copy(SINGLES_RESULTS_FILE, version_backup_dir)
+    shutil.copy(SINGLES_ELO_FILE, version_backup_dir)
+    shutil.copy(SINGLES_FORMATTED_ELO_FILE, version_backup_dir)
 
 
 def read_players_list():
@@ -101,6 +131,8 @@ def recreate_elo_file_preserve_initial_load_values(initial_elo_by_player, result
 
 
 def main():
+    backup_files()
+
     players = read_players_list()
     initial_elo_by_player = read_elo_file_get_initial_load_values_only()
     elo_by_player = initial_elo_by_player.copy()
