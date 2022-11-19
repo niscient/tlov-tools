@@ -21,7 +21,9 @@ function recreateMTBTestSheet() {
       f2Result = myElo + f2(myElo, oppElo, 'B_MTB', K)[0];
       ifHadFullWin = myElo + calculateEloChange(myElo, oppElo, 'A', K)[0];
       ifHadFullLoss = myElo + calculateEloChange(myElo, oppElo, 'B', K)[0];
-      grid.push([myElo, oppElo, myElo - oppElo, f1Result, f2Result, ifHadFullWin, ifHadFullLoss]);
+      grid.push([printableElo(myElo), printableElo(oppElo), myElo - oppElo,
+        printableElo(f1Result), printableElo(f2Result), printableElo(ifHadFullWin),
+        printableElo(ifHadFullLoss)]);
     }
   }
 
