@@ -48,7 +48,7 @@ function isValidDate(date) {
  * are guaranteed to be in sorted order, with epoch date used for a manually-set Elo if no date
  * was originally specified.
  */
-function computeElosDict() {
+function computeElosDictFromMatchBook() {
   let manualElosDict = getManualElosFromPlayersSheet();
   let matchBook = getRowsFromSheet(MATCH_BOOK_SHEET);
 
@@ -173,6 +173,34 @@ function computeElosDict() {
   }
 
   //Logger.log(elosDict);
+
+  return elosDict;
+}
+
+
+/**
+ * Same as computeElosDictFromMatchBook(), but includes manually-set Elo ratings from players
+ * who didn't play any matches for an event.
+ */
+function computeElosDictAllPlayers() {
+  let manualElosDict = getManualElosFromPlayersSheet();
+  let elosDict = computeElosDictFromMatchBook();
+
+  for (const [event, eventValue] of Object.entries(manualElosDict)) {
+    for (const [player, playerValue] of Object.entries(eventValue)) {
+      for (const [matchType, eloList] of Object.entries(playerValue)) {
+        if (isElosDictListEmpty(elosDict, event, player, matchType)) {
+          for (const eloObj of eloList) {
+            addObjectToElosDictList(elosDict, event, player, matchType, eloObj);
+          }
+        }
+      }
+    }
+  }
+
+  Logger.log(elosDict);
+
+  return elosDict;
 }
 
 
@@ -184,6 +212,21 @@ function setObjectInElosDict(dict, event, player, matchType, eloObj) {
     dict[event][player] = {};
   }
   dict[event][player][matchType] = eloObj;
+}
+
+
+// TODO find a way around using this function? javascript equivalent of python defaultdict(list).
+function isElosDictListEmpty(dict, event, player, matchType) {
+  if (!dict.hasOwnProperty(event)) {
+    return true;
+  }
+  if (!dict[event].hasOwnProperty(player)) {
+    return true;
+  }
+  if (!dict[event][player].hasOwnProperty(matchType)) {
+    return true;
+  }
+  return dict[event][player][matchType].length === 0;
 }
 
 
@@ -365,21 +408,11 @@ function getManualElosFromPlayersSheet() {
         continue;
       }
 
-      if (!manualElosDict.hasOwnProperty(event)) {
-        manualElosDict[event] = {};
-      }
-
-      if (!manualElosDict[event].hasOwnProperty(player)) {
-        manualElosDict[event][player] = {};
-      }
-
-      if (!manualElosDict[event][player].hasOwnProperty(matchType)) {
-        manualElosDict[event][player][matchType] = [];
-      }
-
-      for (const existingManualElo of manualElosDict[event][player][matchType]) {
-        if (existingManualElo.date.getTime() === date.getTime()) {
-          throw `For Event = ${event}, Player = ${player}, Match Type = ${matchType}, Date Modified already exists: ${dateModified}`;
+      if (!isElosDictListEmpty(manualElosDict, event, player, matchType)) {
+        for (const existingManualElo of manualElosDict[event][player][matchType]) {
+          if (existingManualElo.date.getTime() === date.getTime()) {
+            throw `For Event = ${event}, Player = ${player}, Match Type = ${matchType}, Date Modified already exists: ${dateModified}`;
+          }
         }
       }
 
@@ -388,7 +421,9 @@ function getManualElosFromPlayersSheet() {
         throw `For Event = ${event}, Player = ${player}, Match Type = ${matchType}, invalid salary: ${salary}`;
       }
 
-      manualElosDict[event][player][matchType].push(new Elo(rating, date, MATCH_ID_MANUAL_ELO));
+      addObjectToElosDictList(manualElosDict, event, player, matchType,
+        new Elo(rating, date, MATCH_ID_MANUAL_ELO));
+
       manualElosDict[event][player][matchType].sort(function(a, b) {
         return a.date.getTime() - b.date.getTime();
       });
@@ -407,7 +442,7 @@ function calculateEloChange(ratingA, ratingB, winner, k) {
     expectedA = getExpectedScore(ratingA, ratingB)
     expectedB = getExpectedScore(ratingB, ratingA)
 
-    // TODO experiment with whether to keep the 0.35 thing or use Bill's formula or what.
+    // TODO experiment with whether to keep the 0.35 thing or use an alternate formula or what.
     let scoreA, scoreB
     if (winner === 'A') {
       scoreA = 1.0
