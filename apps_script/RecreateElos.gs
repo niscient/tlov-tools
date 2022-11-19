@@ -33,6 +33,8 @@ function recreateEloSheet() {
 
   let currentElosDict = {};
 
+  let prevMatchDate = null;
+
   for (let i = 0; i < matchBook.length; ++i) {
     let row = matchBook[i];
 
@@ -60,6 +62,17 @@ function recreateEloSheet() {
     let date = getColumn(row, DATE_COLUMN);
     if (!isValidDate(date)) {
       throw `Match ID=${matchID}: Invalid Date: ${date}`;
+    }
+
+    if (prevMatchDate !== null) {
+      if (prevMatchDate.getTime() > date.getTime()) {
+        // In reality, this will only affect a pretty niche thing: Cases where a manual Elo is
+        // specified mid-season. In such a case, the first applicable row encountered with a
+        // date >= that of the manual Elo entry will pop that manual Elo from the list. If we do
+        // that while processing matches out of order date-wise, that would lead to strange
+        // results.
+        throw `Match ID=${matchID}: Date must be <= that of previous match`;
+      }
     }
 
     let eloAsOfMatchByPlayer = getEloAsOfMatchByPlayer(i, playersInMatch, manualElosDict, currentElosDict, event, matchType, date);
@@ -130,6 +143,8 @@ function recreateEloSheet() {
       }
       currentElosDict[event][player][matchType] = new ManualElo(myNewEloRating, date);
     })
+
+    prevMatchDate = date;
   }
 
   Logger.log("currentElosDict");
