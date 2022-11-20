@@ -25,11 +25,8 @@ const POINTS_FOR_MTB_LOSS = 1;
 function recreateTeamStandingsSheet() {
   let matchBook = getRowsFromSheet(MATCH_BOOK_SHEET);
 
-  let teamStandingsSheet = getSheet(TEAM_STANDINGS_SHEET);
-  teamStandingsSheet.getDataRange().clearContent();
-
-  let eventsList = [];
-  let teamListByEvent = getTeamListByEventFromEventsSheet()
+  let events = [];
+  let teamsByEvent = getTeamsByEventFromEventsSheet()
   let teamStandings = {};
 
   for (let i = 0; i < matchBook.length; ++i) {
@@ -37,21 +34,21 @@ function recreateTeamStandingsSheet() {
 
     let matchID = getColumn(row, MATCH_ID_COLUMN);
     let event = getColumn(row, EVENT_COLUMN);
-    if (!teamListByEvent.hasOwnProperty(event)) {
+    if (!teamsByEvent.hasOwnProperty(event)) {
       throw `Match ID=${matchID} refers to event not in ${EVENTS_SHEET} sheet: "${event}"`;
     }
 
-    if (eventsList.indexOf(event) === -1) {
-      eventsList.push(event);
+    if (events.indexOf(event) === -1) {
+      events.push(event);
     }
 
     let teamA = getColumn(row, TEAM_A_COLUMN);
-    if (teamListByEvent[event].indexOf(teamA) === -1) {
+    if (teamsByEvent[event].indexOf(teamA) === -1) {
       throw `Match ID=${matchID} refers to Team A which doesn't belong to event: "${teamA}"`;
     }
 
     let teamB = getColumn(row, TEAM_B_COLUMN);
-    if (teamListByEvent[event].indexOf(teamB) === -1) {
+    if (teamsByEvent[event].indexOf(teamB) === -1) {
       throw `Match ID=${matchID} refers to Team B which doesn't belong to event: "${teamB}"`;
     }
 
@@ -71,8 +68,8 @@ function recreateTeamStandingsSheet() {
 
   let teamStandingsGrid = [TEAM_STANDINGS_COLUMNS];
 
-  for (const printEvent of eventsList) {
-    for (const printTeam of teamListByEvent[printEvent]) {
+  for (const printEvent of events) {
+    for (const printTeam of teamsByEvent[printEvent]) {
       if (!teamStandings.hasOwnProperty(printEvent)) {
         continue;
       }
@@ -87,12 +84,15 @@ function recreateTeamStandingsSheet() {
       }
 
       teamStandingsGrid.push(eventAndTeamRowArray);
-
-      if (teamStandingsGrid.length > 0) {
-        teamStandingsSheet.getRange(1, 1, teamStandingsGrid.length,
-          teamStandingsGrid[0].length).setValues(teamStandingsGrid);
-      }
     }
+  }
+
+  let teamStandingsSheet = getSheet(TEAM_STANDINGS_SHEET);
+  teamStandingsSheet.getDataRange().clearContent();
+
+  if (teamStandingsGrid.length > 0) {
+    teamStandingsSheet.getRange(1, 1, teamStandingsGrid.length,
+      teamStandingsGrid[0].length).setValues(teamStandingsGrid);
   }
 }
 

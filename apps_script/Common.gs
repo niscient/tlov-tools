@@ -1,8 +1,9 @@
 const MATCH_BOOK_SHEET = 'MatchBook';
 const PLAYERS_SHEET = 'Players';
 const EVENTS_SHEET = 'Events';
-const ELO_SHEET = 'EloSingles';
 const TEAM_STANDINGS_SHEET = 'TeamStandings';
+const CURRENT_ELO_SHEET = 'EloCurrent';
+const ELO_PER_WEEK_SHEET = 'EloPerWeek';
 
 const MATCH_ID_COLUMN = 'Match ID';
 const EVENT_COLUMN = 'Event';
@@ -21,9 +22,9 @@ const DATE_MODIFIED_COLUMN = 'Date Modified';
 const SINGLES_SALARY_COLUMN = 'Singles Salary';
 const DOUBLES_SALARY_COLUMN = 'Doubles Salary';
 
-// TODO despite the Z this doesn't return UTC, instead using local time
-const EPOCH_TIMESTAMP = "1970-01-01T00:00:00.000Z";
-
+// TODO despite the Z, this doesn't return UTC, instead using local time
+const EPOCH_TIMESTAMP = '1970-01-01T00:00:00.000Z';
+const EPOCH_DATE_OBJ = new Date(EPOCH_TIMESTAMP);
 
 function getSheet(sheetName) {
   let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
@@ -105,8 +106,8 @@ function getRowsFromSheet(sheetName) {
 }
 
 
-function getTeamListByEventFromEventsSheet() {
-  var teamListByEvent = {};
+function getTeamsByEventFromEventsSheet() {
+  var teamsByEvent = {};
 
   let eventsGrid = getRowsFromSheet(EVENTS_SHEET)
   for (let i = 0; i < eventsGrid.length; i++) {
@@ -115,15 +116,15 @@ function getTeamListByEventFromEventsSheet() {
     let event = getColumn(eventRow, EVENT_COLUMN);
     let team = getColumn(eventRow, TEAM_COLUMN);
 
-    if (teamListByEvent.hasOwnProperty(event)) {
-      if (teamListByEvent[event].indexOf(team) === -1) {
-        teamListByEvent[event].push(team);
+    if (teamsByEvent.hasOwnProperty(event)) {
+      if (teamsByEvent[event].indexOf(team) === -1) {
+        teamsByEvent[event].push(team);
       }
     }
     else {
-      teamListByEvent[event] = [team];
+      teamsByEvent[event] = [team];
     }
   }
 
-  return teamListByEvent;
+  return teamsByEvent;
 }

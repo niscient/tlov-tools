@@ -52,7 +52,10 @@ function computeElosDictFromMatchBook() {
   let manualElosDict = getManualElosFromPlayersSheet();
   let matchBook = getRowsFromSheet(MATCH_BOOK_SHEET);
 
+  // Dict tracking state of Elos as of match being currently processed. By the end of the
+  // function, it will represent the player's current status.
   let currentElosDict = {};
+
   let elosDict = {};
 
   let prevMatchDate = null;
@@ -93,6 +96,10 @@ function computeElosDictFromMatchBook() {
         // date >= that of the manual Elo entry will pop that manual Elo from the list. If we do
         // that while processing matches out of order date-wise, that would lead to strange
         // results.
+        // Also, however, because we already expect these matches to be in order, we won't sort
+        // the list of Elo results we generate, since they're expected to already be in sorted
+        // order (and we'll add pre-match manually-set Elo results before computed Elo results
+        // from a match).
         throw `Match ID=${matchID}: Date must be <= that of previous match`;
       }
     }

@@ -1,4 +1,5 @@
 function recreateOutputSheets() {
   recreateTeamStandingsSheet();
-  recreateEloSheets();
+  // TODO uncomment once ready
+  //recreateEloSheets();
 }
