@@ -1,14 +1,13 @@
 const START_OF_WEEK_DAY_VALUE = 1;  // Monday
 
-const ELO_PER_WEEK_MANDATORY_COLUMNS = ['Event', 'Match Type', 'Player'];
+const WEEKLY_RATINGS_MANDATORY_COLUMNS = ['Event', 'Match Type', 'Player'];
 
-const CURRENT_ELO_COLUMNS = ['Event', 'Match Type', 'Player', 'Current Rating',
+const PLAYER_SUMMARY_COLUMNS = ['Event', 'Match Type', 'Player', 'Current Rating',
   'Highest Rating', 'Highest Rating Date', 'Lowest Rating', 'Lowest Rating Date',
   'Current Ranking', 'Highest Ranking', 'Lowest Ranking', 'Biggest Win', 'Worst Loss'];
 
 
-// TODO maybe split into separate functions per sheet?
-function recreateEloSheets() {
+function recreateRatingDataSheets() {
   // Get a complete set of Elo updates, in the sorted order in which they happened -- including
   // manually-set Elos for players who didn't play any matches for the relevant
   // event+player+matchType.
@@ -20,16 +19,9 @@ function recreateEloSheets() {
   let players = getPlayersFromElosDict(elosDict);
   players.sort();
 
-  // TODO get dict of match ID to match row, so can get worst loss and greatest win details
-
   // Dict of format {event: {matchType: {player: [rating, ...]}}}, with each rating being
   // an end-of-week rating. Note that start-of-season ratings are not stored.
   let weeklyRatingsDict = {};
-
-  // Dict of format {event: {matchType: [TODO object]}}
-  //let weeklyRankingsDict = {};
-
-  //let currentStats = {};
 
   // Note that we don't have to go through the events in order, but choose to do so for sanity's
   // sake in case we decide to do logging for clarity/debugging.
@@ -109,10 +101,15 @@ function recreateEloSheets() {
 
     Logger.log(weeklyRatingsDict);
   }
+  
+  recreateWeeklyRatingsSheet(events, players, weeklyRatingsDict);
+  recreatePlayerSummarySheet(events, players, weeklyRatingsDict);
+}
 
-  let weeklyEloGrid = [ELO_PER_WEEK_MANDATORY_COLUMNS];
 
-  let weeklyEloGridColumnCount = weeklyEloGrid[0].length;
+function recreateWeeklyRatingsSheet(events, players, weeklyRatingsDict) {
+  let weeklyRatingsGrid = [WEEKLY_RATINGS_MANDATORY_COLUMNS];
+  let weekCount = 0;
 
   for (const event of events) {
     for (const matchType of ['Singles', 'Doubles']) {
@@ -125,29 +122,56 @@ function recreateEloSheets() {
           continue;
         }
 
-        weeklyEloGrid.push([event, matchType, player,
+        weeklyRatingsGrid.push([event, matchType, player,
           ...weeklyRatingsDict[event][matchType][player]]);
 
         // Note that if any row in the grid has a different number of columns than any other row,
         // we'll get an error when we try to write the grid to the sheet.
-        weeklyEloGridColumnCount = weeklyRatingsDict[event][matchType][player].length;
+        weekCount = weeklyRatingsDict[event][matchType][player].length;
       }
     }
   }
 
-  for (let i = 0; i < weeklyEloGridColumnCount; ++i) {
-    weeklyEloGrid[0].push(`Week ${i + 1}`);
+  for (let i = 0; i < weekCount; ++i) {
+    weeklyRatingsGrid[0].push(`Week ${i + 1}`);
   }
 
-  //Logger.log(weeklyEloGrid);
+  //Logger.log(weeklyRatingsGrid);
 
-  let eloPerWeekSheet = getSheet(ELO_PER_WEEK_SHEET);
-  eloPerWeekSheet.getDataRange().clearContent();
+  let weeklyRatingsSheet = getSheet(WEEKLY_RATINGS_SHEET);
+  weeklyRatingsSheet.getDataRange().clearContent();
 
-  if (weeklyEloGrid.length > 0) {
-    eloPerWeekSheet.getRange(1, 1, weeklyEloGrid.length,
-      weeklyEloGrid[0].length).setValues(weeklyEloGrid);
+  if (weeklyRatingsGrid.length > 0) {
+    weeklyRatingsSheet.getRange(1, 1, weeklyRatingsGrid.length,
+      weeklyRatingsGrid[0].length).setValues(weeklyRatingsGrid);
   }
+}
+
+
+function recreatePlayerSummarySheet(events, players, weeklyRatingsDict) {
+  // TODO get dict of match ID to match row, so can get worst loss and greatest win details
+
+  // Dict of format {event: {matchType: [TODO object]}}
+  //let weeklyRankingsDict = {};
+
+  //let currentStats = {};
+
+  //Logger.log(weeklyRankingsDict);
+
+  // TODO uncomment
+  /*
+  let playerSummaryGrid = [PLAYER_SUMMARY_COLUMNS];
+
+  // TODO add data to grid
+
+  let playerSummarySheet = getSheet(PLAYER_SUMMARY_SHEET);
+  playerSummarySheet.getDataRange().clearContent();
+
+  if (playerSummaryGrid.length > 0) {
+    playerSummarySheet.getRange(1, 1, playerSummaryGrid.length,
+      playerSummaryGrid[0].length).setValues(playerSummaryGrid);
+  }
+  */
 }
 
 

@@ -1,9 +1,9 @@
 const MATCH_BOOK_SHEET = 'MatchBook';
 const PLAYERS_SHEET = 'Players';
 const EVENTS_SHEET = 'Events';
-const TEAM_STANDINGS_SHEET = 'TeamStandings';
-const CURRENT_ELO_SHEET = 'EloCurrent';
-const ELO_PER_WEEK_SHEET = 'EloPerWeek';
+const TEAM_STANDINGS_SHEET = 'TeamStats';
+const WEEKLY_RATINGS_SHEET = 'WeeklyRatings';
+const PLAYER_SUMMARY_SHEET = 'PlayerSummary';
 
 const MATCH_ID_COLUMN = 'Match ID';
 const EVENT_COLUMN = 'Event';
