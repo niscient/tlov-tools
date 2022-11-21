@@ -7,6 +7,30 @@ const PLAYER_SUMMARY_COLUMNS = ['Event', 'Match Type', 'Player', 'Current Rating
   'Current Ranking', 'Highest Ranking', 'Lowest Ranking', 'Biggest Win', 'Worst Loss'];
 
 
+class PlayerElo {
+  constructor(player, rating) {
+    this.player = player;
+    this.rating = rating;
+  }
+}
+
+
+class BiggestMatchResult {
+  constructor(player, ratingChange, date, description) {
+    this.player = player;
+    this.ratingChange = ratingChange;
+    this.date = date;
+    this.description = description;
+  }
+
+  toString() {
+    let prefix = (this.ratingChange >= 0 ? '+' : '');
+    return prefix + printableElo(this.ratingChange) + ', ' + this.description + ' (' +
+      this.date.toLocaleDateString() + ')';
+  }
+}
+
+
 function recreateRatingDataSheets() {
   // Get a complete set of Elo updates, in the sorted order in which they happened -- including
   // manually-set Elos for players who didn't play any matches for the relevant
@@ -48,9 +72,12 @@ function recreateRatingDataSheets() {
       for (const [matchType, eloList] of Object.entries(playerValue)) {
         let currentWeekStartDate = new Date(firstWeekStartDate.getTime());
         let nextWeekStartDate = new Date(currentWeekStartDate.getTime());
-        // TODO i'm worried about nonsense occurring where timezone gets in the way and makes it
-        // so that dates don't fall into the week they should. maybe i should arbitrarily set all
-        // times to UTC midnight when i read the dates to begin with.
+        // TODO it's possible that nonsense could occur where timezone gets in the way and makes
+        // it so that dates don't fall into the week they should. when a date is read from the
+        // sheet, it is treated as midnight of the day in question, for whatever timezone
+        // applied as of that date -- whereas it would technically be better probably if i
+        // treated it as UTC midnight as of that date. but in practice i doubt it would ever
+        // matter.
 
         nextWeekStartDate.setDate(nextWeekStartDate.getDate() + 7);
 
@@ -99,15 +126,16 @@ function recreateRatingDataSheets() {
       }
     }
 
+    Logger.log('Weekly ratings:');
     Logger.log(weeklyRatingsDict);
   }
   
-  recreateWeeklyRatingsSheet(events, players, weeklyRatingsDict);
-  recreatePlayerSummarySheet(events, players, weeklyRatingsDict);
+  recreateWeeklyRatingsSheet(events, players, weeklyRatingsDict, elosDict);
+  recreatePlayerSummarySheet(events, players, weeklyRatingsDict, elosDict);
 }
 
 
-function recreateWeeklyRatingsSheet(events, players, weeklyRatingsDict) {
+function recreateWeeklyRatingsSheet(events, players, weeklyRatingsDict, elosDict) {
   let weeklyRatingsGrid = [WEEKLY_RATINGS_MANDATORY_COLUMNS];
   let weekCount = 0;
 
@@ -122,8 +150,12 @@ function recreateWeeklyRatingsSheet(events, players, weeklyRatingsDict) {
           continue;
         }
 
-        weeklyRatingsGrid.push([event, matchType, player,
-          ...weeklyRatingsDict[event][matchType][player]]);
+        let printableWeeklyRatings = [...weeklyRatingsDict[event][matchType][player]];
+        for (let i = 0; i < printableWeeklyRatings.length; ++i) {
+          printableWeeklyRatings[i] = printableElo(printableWeeklyRatings[i]);
+        }
+
+        weeklyRatingsGrid.push([event, matchType, player, ...printableWeeklyRatings]);
 
         // Note that if any row in the grid has a different number of columns than any other row,
         // we'll get an error when we try to write the grid to the sheet.
@@ -148,21 +180,176 @@ function recreateWeeklyRatingsSheet(events, players, weeklyRatingsDict) {
 }
 
 
-function recreatePlayerSummarySheet(events, players, weeklyRatingsDict) {
-  // TODO get dict of match ID to match row, so can get worst loss and greatest win details
+function recreatePlayerSummarySheet(events, players, weeklyRatingsDict, elosDict) {
+  // TODO we actually don't need to store elo here -- could just store player name. we also
+  // don't technically need to store a function-wide dict like this.
+  // Dict of format {event: {matchType: [PlayerElo, ...]}}
+  let weeklyRankingsDict = {};
 
-  // Dict of format {event: {matchType: [TODO object]}}
-  //let weeklyRankingsDict = {};
+  let currentStats = {};
 
-  //let currentStats = {};
+  for (const event of events) {
+    let firstAndLastWeekStartDates = getFirstAndLastWeekStartDatesFromEventDict(elosDict[event]);
+    let firstWeekStartDate = firstAndLastWeekStartDates[0];
 
+    for (const matchType of ['Singles', 'Doubles']) {
+      if (!weeklyRatingsDict[event].hasOwnProperty(matchType)) {
+        continue;
+      }
+
+      // Set up stats dict and compute rating data
+      for (const player of players) {
+        if (!weeklyRatingsDict[event][matchType].hasOwnProperty(player)) {
+          continue;
+        }
+
+        if (!currentStats.hasOwnProperty(event)) {
+          currentStats[event] = {};
+        }
+        if (!currentStats[event].hasOwnProperty(matchType)) {
+          currentStats[event][matchType] = {};
+        }
+        if (!currentStats[event][matchType].hasOwnProperty(player)) {
+          currentStats[event][matchType][player] = {};
+        }
+
+        let stats = currentStats[event][matchType][player];
+        stats['Event'] = event;
+        stats['Match Type'] = matchType;
+        stats['Player'] = player;
+        stats['Current Rating'] = null;
+        stats['Highest Rating'] = null;
+        stats['Highest Rating Date'] = null;
+        stats['Lowest Rating'] = null;
+        stats['Lowest Rating Date'] = null;
+        stats['Current Ranking'] = null;
+        stats['Highest Ranking'] = null;
+        stats['Lowest Ranking'] = null;
+        stats['Biggest Win'] = null;
+        stats['Worst Loss'] = null;
+
+        for (let i = 0; i < weeklyRatingsDict[event][matchType][player].length; ++i) {
+          const weeklyRating = weeklyRatingsDict[event][matchType][player][i];
+
+          let endOfWeekDate = new Date(firstWeekStartDate.getTime());
+          endOfWeekDate.setDate(endOfWeekDate.getDate() + 7*i + 6);
+
+          stats['Current Rating'] = printableElo(weeklyRating);
+
+          if (stats['Highest Rating'] === null || weeklyRating > stats['Highest Rating']) {
+            stats['Highest Rating'] = printableElo(weeklyRating);
+            stats['Highest Rating Date'] = endOfWeekDate;
+          }
+
+          if (stats['Lowest Rating'] === null || weeklyRating < stats['Lowest Rating']) {
+            stats['Lowest Rating'] = printableElo(weeklyRating);
+            stats['Lowest Rating Date'] = endOfWeekDate;
+          }
+        }
+      }
+
+      // Compute ranking data
+
+      if (!weeklyRankingsDict.hasOwnProperty(event)) {
+        weeklyRankingsDict[event] = {};
+      }
+      if (!weeklyRankingsDict[event].hasOwnProperty(matchType)) {
+        weeklyRankingsDict[event][matchType] = [];
+      }
+
+      for (const [player, eloList] of Object.entries(weeklyRatingsDict[event][matchType])) {
+        for (let i = 0; i < eloList.length; ++i) {
+          while (weeklyRankingsDict[event][matchType].length < i+1) {
+            weeklyRankingsDict[event][matchType].push([]);
+          }
+
+          weeklyRankingsDict[event][matchType][i].push(new PlayerElo(player, eloList[i]));
+          weeklyRankingsDict[event][matchType][i].sort(function(x, y) {
+            if (x.rating < y.rating) {
+              return -1;
+            }
+            if (x.rating > y.rating) {
+              return 1;
+            }
+            return 0;
+          });
+        }
+      }
+
+      for (let week = 0; week < weeklyRankingsDict[event][matchType].length; ++week) {
+        const sortedPlayerElos = weeklyRankingsDict[event][matchType][week];
+
+        //Logger.log(week);
+        //Logger.log(sortedPlayerElos);
+
+        for (let i = 0; i < sortedPlayerElos.length; ++i) {
+          const playerElo = sortedPlayerElos[i];
+
+          // TODO maybe treat ties as the same ranking, but taking up multiple spots. e.g. if #2
+          // and #3 are tied, they're both considered #2 to me. but the next item is #4. up to me
+          // if i want to say "#2 (tied)" -- means a little more data needs to be stored, like
+          // a Ranking object.
+          let ranking = sortedPlayerElos.length - i;
+
+          let stats = currentStats[event][matchType][playerElo.player];
+
+          stats['Current Ranking'] = ranking;
+
+          // Note that "highest" and "lowest" are inverses of what those terms normally mean,
+          // since a lower value is a higher ranking.
+
+          if (stats['Highest Ranking'] === null || ranking < stats['Highest Ranking']) {
+            stats['Highest Ranking'] = ranking;
+          }
+
+          if (stats['Lowest Ranking'] === null || ranking > stats['Lowest Ranking']) {
+            stats['Lowest Ranking'] = ranking;
+          }
+        }
+      }
+    }
+  }
+
+  // Compute biggest win and loss
+  populateBiggestWinAndLoss(currentStats, elosDict);
+
+  //Logger.log(currentStats)
   //Logger.log(weeklyRankingsDict);
 
-  // TODO uncomment
-  /*
   let playerSummaryGrid = [PLAYER_SUMMARY_COLUMNS];
 
-  // TODO add data to grid
+  for (const event of events) {
+    if (!currentStats.hasOwnProperty(event)) {
+      continue;
+    }
+
+    for (const matchType of ['Singles', 'Doubles']) {
+      if (!currentStats[event].hasOwnProperty(matchType)) {
+        continue;
+      }
+
+      for (const player of players) {
+        if (!currentStats[event][matchType].hasOwnProperty(player)) {
+          continue;
+        }
+
+        summaryRowArray = [];
+        for (const outputColumn of PLAYER_SUMMARY_COLUMNS) {
+          let text;
+          if ((outputColumn == 'Biggest Win' || outputColumn == 'Worst Loss') &&
+            currentStats[event][matchType][player][outputColumn] !== null) {
+            text = currentStats[event][matchType][player][outputColumn].toString();
+          }
+          else {
+            text = currentStats[event][matchType][player][outputColumn];
+          }
+          summaryRowArray.push(text);
+        }
+
+        playerSummaryGrid.push(summaryRowArray);
+      }
+    }
+  }
 
   let playerSummarySheet = getSheet(PLAYER_SUMMARY_SHEET);
   playerSummarySheet.getDataRange().clearContent();
@@ -171,7 +358,91 @@ function recreatePlayerSummarySheet(events, players, weeklyRatingsDict) {
     playerSummarySheet.getRange(1, 1, playerSummaryGrid.length,
       playerSummaryGrid[0].length).setValues(playerSummaryGrid);
   }
-  */
+}
+
+
+function populateBiggestWinAndLoss(currentStats, elosDict) {
+  let matchBook = getRowsFromSheet(MATCH_BOOK_SHEET);
+
+  let matchRowByMatchID = {};
+  for (const matchRow of matchBook) {
+    let matchID = getColumn(matchRow, MATCH_ID_COLUMN);
+    if (matchRowByMatchID.hasOwnProperty(matchID)) {
+      throw `Multiple matches have Match ID=${matchID}`;
+    }
+    matchRowByMatchID[matchID] = matchRow;
+  }
+
+  for (const [event, eventValue] of Object.entries(elosDict)) {
+    for (const [player, playerValue] of Object.entries(eventValue)) {
+      for (const [matchType, eloList] of Object.entries(playerValue)) {
+        let stats = currentStats[event][matchType][player];
+
+        let currentRating = null;
+        
+        for (const eloObj of eloList) {
+          let ratingChange;
+          if (currentRating === null) {
+            ratingChange = eloObj.rating;
+          }
+          else {
+            ratingChange = eloObj.rating - currentRating;
+          }
+
+          if (eloObj.matchID != MATCH_ID_MANUAL_ELO) {
+            if (!matchRowByMatchID.hasOwnProperty(eloObj.matchID)) {
+              throw `Logic error: Failed to find match for Elo result with Match ID=${eloObj.matchID}`;
+            }
+            let matchRow = matchRowByMatchID[eloObj.matchID];
+
+            if (ratingChange > 0) {
+              if (stats['Biggest Win'] === null ||
+                ratingChange > stats['Biggest Win'].ratingChange) {
+                stats['Biggest Win'] = new BiggestMatchResult(player, ratingChange, eloObj.date,
+                  getBiggestMatchDescription(player, matchRow, 'def.'));
+              }
+            }
+
+            if (ratingChange < 0) {
+              if (stats['Worst Loss'] === null ||
+                ratingChange < stats['Worst Loss'].ratingChange) {
+                stats['Worst Loss'] = new BiggestMatchResult(player, ratingChange, eloObj.date,
+                  getBiggestMatchDescription(player, matchRow, 'l. to'));
+              }
+            }
+          }
+
+          currentRating = eloObj.rating;
+        }
+      }
+    }
+  }
+}
+
+
+function getBiggestMatchDescription(player, matchRow, resultText) {
+  let playerA1 = getColumn(matchRow, PLAYER_A1_COLUMN);
+  let playerA2 = getColumn(matchRow, PLAYER_A2_COLUMN);
+  let playerB1 = getColumn(matchRow, PLAYER_B1_COLUMN);
+  let playerB2 = getColumn(matchRow, PLAYER_B2_COLUMN);
+
+  let opponents;
+  if (player === playerA1 || player === playerA2) {
+    opponents = [playerB1, playerB2];
+  }
+  if (player === playerB1 || player === playerB2) {
+    opponents = [playerA1, playerA2];
+  }
+
+  let opponentText = '';
+  if (opponents[0].length > 0) {
+    opponentText += opponents[0]
+  }
+  if (opponents[1].length > 0) {
+    opponentText += 'and ' + opponents[0]
+  }
+
+  return `${resultText} ${opponentText}`;
 }
 
 

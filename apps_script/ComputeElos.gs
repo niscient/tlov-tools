@@ -60,9 +60,8 @@ function computeElosDictFromMatchBook() {
 
   let prevMatchDate = null;
 
-  for (let i = 0; i < matchBook.length; ++i) {
-    let row = matchBook[i];
-
+  for (const row of matchBook) {
+    let matchID = null;
     let event = null;
     let matchType = null;
     let winner = null;
@@ -104,7 +103,7 @@ function computeElosDictFromMatchBook() {
       }
     }
 
-    let preMatchEloDict = getEloResultPreMatchByPlayer(i, playersInMatch, manualElosDict,
+    let preMatchEloDict = getEloResultPreMatchByPlayer(matchID, playersInMatch, manualElosDict,
       currentElosDict, event, matchType, date);
 
     let newRatingByPlayer = {};
@@ -205,6 +204,7 @@ function computeElosDictAllPlayers() {
     }
   }
 
+  Logger.log('Full list of sorted ratings:');
   Logger.log(elosDict);
 
   return elosDict;
@@ -268,7 +268,7 @@ function getPlayersInMatch(row) {
       throw `Singles match must have ${PLAYER_A1_COLUMN} and ${PLAYER_B1_COLUMN} populated`;
     }
 
-    if (playersInMatch.length != 2) {
+    if (playersInMatch.length !== 2) {
       throw `Singles match must have 2 distinct players`;
     }
   }
@@ -281,7 +281,7 @@ function getPlayersInMatch(row) {
       }
     }
 
-    if (playersInMatch.length != 4) {
+    if (playersInMatch.length !== 4) {
       throw `Doubles match must have 4 distinct players`;
     }
   }
@@ -293,7 +293,7 @@ function getPlayersInMatch(row) {
 /**
  * Helper function which returns a dictionary of format: {player: [EloResultPreMatch]}
  */
-function getEloResultPreMatchByPlayer(matchIndex, playersInMatch, manualElosDict,
+function getEloResultPreMatchByPlayer(matchID, playersInMatch, manualElosDict,
   currentElosDict, event, matchType, date) {
   eloResultPreMatchByPlayer = {};
 
@@ -322,10 +322,10 @@ function getEloResultPreMatchByPlayer(matchIndex, playersInMatch, manualElosDict
 
     /*
     if (manualElo === null) {
-      Logger.log(`i=${matchIndex}, event=${event}, player=${player}, matchType=${matchType}, currentElo=(${currentElo.date}, ${currentElo.rating})`);
+      Logger.log(`matchID=${matchID}, event=${event}, player=${player}, matchType=${matchType}, currentElo=(${currentElo.date}, ${currentElo.rating})`);
     }
     else {
-      Logger.log(`i=${matchIndex}, event=${event}, player=${player}, matchType=${matchType}, manualElo=(${manualElo.date}, ${manualElo.rating}), currentElo=(${currentElo.date}, ${currentElo.rating})`);
+      Logger.log(`matchID=${matchID}, event=${event}, player=${player}, matchType=${matchType}, manualElo=(${manualElo.date}, ${manualElo.rating}), currentElo=(${currentElo.date}, ${currentElo.rating})`);
     }
     */
 
@@ -400,8 +400,6 @@ function getManualElosFromPlayersSheet() {
       }
     }
 
-    // TODO maybe create "generic match type" constants (and rename matchType too) rather than
-    // using these string literals.
     for (const matchType of ['Singles', 'Doubles']) {
       let salary;
       if (matchType === 'Singles') {

@@ -68,19 +68,18 @@ function recreateTeamStandingsSheet() {
 
   let teamStandingsGrid = [TEAM_STANDINGS_COLUMNS];
 
-  for (const printEvent of events) {
-    for (const printTeam of teamsByEvent[printEvent]) {
-      if (!teamStandings.hasOwnProperty(printEvent)) {
-        continue;
-      }
-      if (!teamStandings[printEvent].hasOwnProperty(printTeam)) {
+  for (const event of events) {
+    if (!teamStandings.hasOwnProperty(event)) {
+      continue;
+    }
+    for (const team of teamsByEvent[event]) {
+      if (!teamStandings[event].hasOwnProperty(team)) {
         continue;
       }
 
       eventAndTeamRowArray = [];
-
       for (const outputColumn of TEAM_STANDINGS_COLUMNS) {
-        eventAndTeamRowArray.push(teamStandings[printEvent][printTeam][outputColumn]);
+        eventAndTeamRowArray.push(teamStandings[event][team][outputColumn]);
       }
 
       teamStandingsGrid.push(eventAndTeamRowArray);

@@ -22,7 +22,6 @@ const DATE_MODIFIED_COLUMN = 'Date Modified';
 const SINGLES_SALARY_COLUMN = 'Singles Salary';
 const DOUBLES_SALARY_COLUMN = 'Doubles Salary';
 
-// TODO despite the Z, this doesn't return UTC, instead using local time
 const EPOCH_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 const EPOCH_DATE_OBJ = new Date(EPOCH_TIMESTAMP);
 
@@ -73,7 +72,7 @@ function getRowsFromSheet(sheetName) {
     let row = dataGrid[row_i];
 
     if (!foundFirstLine) {
-      if (row.length > 0 && row[0] != '') {
+      if (row.length > 0 && row[0] !== '') {
         foundFirstLine = true;
 
         for (var col_i = 0; col_i < row.length; col_i++) {
