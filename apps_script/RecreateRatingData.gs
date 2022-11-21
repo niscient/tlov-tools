@@ -11,13 +11,16 @@ if you play multiple matches a week and achieve your highest rating and ranking 
 match but lose that in the 2nd match, it'll be as if those values never existed by the time
 the next week rolls around.
 There are a few possible solutions:
-(1) don't print current-week results anywhere, including
+(1) don't print current-week results anywhere, including WeeklyRatings or
 Current Rating! Use some other mechanism to store "absolutely current rating".
 (2) allow Highest Rating to mean only highest rating from weeks before this week. same for
 other highest/lowest fields.
 (3) allow Highest Rating to include Current Rating, meaning that it can vanish at the end of
-the week. but keep highest ranking as only updating once per week. (not a great solution since
-i find it misleading that results can vanish.)
+the week (which is current behavior). but keep highest ranking as only updating once per week.
+(not a great solution since i find it misleading that results can vanish.)
+(4) make Highest Rating not week-dependent, meaning that i need to use a different mechanism
+to generate it, not just end-of-week results. presumably keep highest ranking using end-of-week
+results.
 In practice I suspect that it doesn't matter at all, since probably the sheet will only be
 updated once a week, with the scores of all the matches any given player has played that week.
 i also suspect that the population of players who would bother checking their rating midweek
