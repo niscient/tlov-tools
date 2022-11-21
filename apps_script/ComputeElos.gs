@@ -130,6 +130,9 @@ function computeElosDictFromMatchBook() {
       newRatingByPlayer[playerB1] = roundElo(ratingB + changeB);
     }
     else if (matchType === 'Doubles') {
+      let playerA2 = getColumn(row, PLAYER_A2_COLUMN);
+      let playerB2 = getColumn(row, PLAYER_B2_COLUMN);
+
       if (!preMatchEloDict.hasOwnProperty(playerA1)) {
         throw `Match ID=${matchID}: Failed to get Elo for player ${playerA1}`;
       }

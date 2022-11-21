@@ -1,3 +1,15 @@
+/*
+TODO:
+""""
+Maybe add player level (Challenger etc) to Player sheet (and maybe also the WeeklyRanking+PlayerSummary sheets) for your filtering/sorting convenience. We could also make it so that there's a dedicated WeeklyRanking_Challenger or something sheet if you don't want to grab stuff from the sheet manually.
+""""
+
+TODO maybe for Highest Rating and Lowest Rating:
+"""
+what I've built is "Highest End-of-Week Rating". Could tweak that if necessary to make Highest Rating "Highest Rating Ever Achieved, Even If You Lose That Rating by the End of the Week".
+"""
+*/
+
 const START_OF_WEEK_DAY_VALUE = 1;  // Monday
 
 const WEEKLY_RATINGS_MANDATORY_COLUMNS = ['Event', 'Match Type', 'Player'];
@@ -439,7 +451,7 @@ function getBiggestMatchDescription(player, matchRow, resultText) {
     opponentText += opponents[0]
   }
   if (opponents[1].length > 0) {
-    opponentText += 'and ' + opponents[0]
+    opponentText += ' and ' + opponents[1]
   }
 
   return `${resultText} ${opponentText}`;
