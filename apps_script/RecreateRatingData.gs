@@ -1,5 +1,30 @@
 /*
 TODO:
+"""
+It's somewhat misleading that the Current Rating, Highest Rating, Highest Ranking, and Lowest
+Ranking are all temporary -- if those values come from midweek values, they will vanish as if
+they had never existed by the time the end of the week comes around. So your "highest ranking"
+is very temporary. That is solvable by making it so that highest ranking is only updated at the
+end of the week, but highest rating less so since it is misleading if Current Rating is higher
+than Highest Rating because Highest Rating is old (but not obviously labeled as such). Basically,
+if you play multiple matches a week and achieve your highest rating and ranking in the first
+match but lose that in the 2nd match, it'll be as if those values never existed by the time
+the next week rolls around.
+There are a few possible solutions:
+(1) don't print current-week results anywhere, including
+Current Rating! Use some other mechanism to store "absolutely current rating".
+(2) allow Highest Rating to mean only highest rating from weeks before this week. same for
+other highest/lowest fields.
+(3) allow Highest Rating to include Current Rating, meaning that it can vanish at the end of
+the week. but keep highest ranking as only updating once per week. (not a great solution since
+i find it misleading that results can vanish.)
+In practice I suspect that it doesn't matter at all, since probably the sheet will only be
+updated once a week, with the scores of all the matches any given player has played that week.
+i also suspect that the population of players who would bother checking their rating midweek
+between matches is very small.
+"""
+
+TODO:
 """"
 Maybe add player level (Challenger etc) to Player sheet (and maybe also the WeeklyRanking+PlayerSummary sheets) for your filtering/sorting convenience. We could also make it so that there's a dedicated WeeklyRanking_Challenger or something sheet if you don't want to grab stuff from the sheet manually.
 """"
@@ -246,15 +271,15 @@ function recreatePlayerSummarySheet(events, players, weeklyRatingsDict, elosDict
           let endOfWeekDate = new Date(firstWeekStartDate.getTime());
           endOfWeekDate.setDate(endOfWeekDate.getDate() + 7*i + 6);
 
-          stats['Current Rating'] = printableElo(weeklyRating);
+          stats['Current Rating'] = weeklyRating;
 
           if (stats['Highest Rating'] === null || weeklyRating > stats['Highest Rating']) {
-            stats['Highest Rating'] = printableElo(weeklyRating);
+            stats['Highest Rating'] = weeklyRating;
             stats['Highest Rating Date'] = endOfWeekDate;
           }
 
           if (stats['Lowest Rating'] === null || weeklyRating < stats['Lowest Rating']) {
-            stats['Lowest Rating'] = printableElo(weeklyRating);
+            stats['Lowest Rating'] = weeklyRating;
             stats['Lowest Rating Date'] = endOfWeekDate;
           }
         }
@@ -347,15 +372,17 @@ function recreatePlayerSummarySheet(events, players, weeklyRatingsDict, elosDict
 
         summaryRowArray = [];
         for (const outputColumn of PLAYER_SUMMARY_COLUMNS) {
-          let text;
-          if ((outputColumn == 'Biggest Win' || outputColumn == 'Worst Loss') &&
-            currentStats[event][matchType][player][outputColumn] !== null) {
-            text = currentStats[event][matchType][player][outputColumn].toString();
+          let value = currentStats[event][matchType][player][outputColumn];
+
+          if (['Biggest Win', 'Worst Loss'].indexOf(outputColumn) !== -1 && value !== null) {
+            value = value.toString();
           }
-          else {
-            text = currentStats[event][matchType][player][outputColumn];
+          else if (['Current Rating', 'Highest Rating', 'Lowest Rating'].indexOf(
+            outputColumn) !== -1 && value !== null) {
+            value = printableElo(value);
           }
-          summaryRowArray.push(text);
+
+          summaryRowArray.push(value);
         }
 
         playerSummaryGrid.push(summaryRowArray);
